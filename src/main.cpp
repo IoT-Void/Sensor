@@ -1,61 +1,101 @@
-#include <Arduino.h>
+#include <ESP8266WiFi.h>
+#include <PubSubClient.h>
+#include <ConfigPortal8266.h>
+#include <DHTesp.h>
 
-int Vo = A0; 
+char*               ssid_pfix = (char*)"test";
+String              user_config_html =""
+    "<p><input type='text' name='mqttServer' placeholders='mqtt_Broker'>";
 
-int V_LED = 12;   
-int cnt =0; 
-  
+const int trigPin = 13;
+const int echoPin = 12;
+long duration;
+float distance;
+const char*         mqttServer;
+const int           mqttPort = 1883;
+unsigned long       interval = 100;
+unsigned long       lastPublished = - interval;
 
-float Vo_value = 0;
+WiFiClient          espClient;
+PubSubClient        client(espClient);
+DHTesp              dht;
+float               humidity = 0;
+float               temperature = 0;
+void callback(char* topic, byte* payload, unsigned int length);
+void pubStatus();
 
-float Voltage = 0;
+void setup() {
+    Serial.begin(115200);
+    dht.setup(14, DHTesp::DHT22);
+    loadConfig();
+    pinMode(trigPin,OUTPUT);
+    pinMode(echoPin,INPUT);
 
-float dustDensity = 0;
-double average[20] = {0,};
+    if(!cfg.containsKey("config") || strcmp((const char*)cfg["config"],"done")){
+        configDevice();
+    }
+    WiFi.mode(WIFI_STA);
+    WiFi.begin((const char*)cfg["ssid"],(const char*)cfg["w_pw"]);
+    
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(500);
+        Serial.print(".");
+    }
+
+    mqttServer = cfg["mqttServer"];
+
+    Serial.println("Connected to the WiFi network");
+    client.setServer(mqttServer, mqttPort);
+    client.setCallback(callback);
  
-
-void setup(){
-
-  Serial.begin(9600);
-
-  pinMode(V_LED, OUTPUT);
-
-  pinMode(Vo, INPUT);
-
+    while (!client.connected()) {
+        Serial.println("Connecting to MQTT...");
+ 
+        if (client.connect("Inside")) {
+            Serial.println("connected");  
+        } else {
+            Serial.print("failed with state "); Serial.println(client.state());
+            delay(2000);
+        }
+    }
 }
 
- 
+void loop() {
+    client.loop();
 
-void loop(){
+    unsigned long currentMillis = millis();
+    if(currentMillis - lastPublished >= interval) {
+        lastPublished = currentMillis;
+        pubStatus();
+    }
+}
 
-  
-  double sum=0;
+void pubStatus() {
 
-  digitalWrite(V_LED,LOW);
+    digitalWrite(trigPin,LOW);
+    delayMicroseconds(2);
+    digitalWrite(trigPin,HIGH);
+    delayMicroseconds(10);
+    digitalWrite(trigPin,LOW);
 
-  delayMicroseconds(280);
+    duration = pulseIn(echoPin, HIGH);
+    distance = duration * 0.017;
 
-  Vo_value = analogRead(Vo); 
+    char dist_buf[10];
 
-  delayMicroseconds(40);
+    sprintf(dist_buf,"%f",distance);
+    if(distance <100){
+      printf("B Detected\n");
+      client.publish("id/Void/KoneJ/Inside",dist_buf);
+      delay(1000);
+    }
+    
 
-  digitalWrite(V_LED,HIGH); 
 
-  delayMicroseconds(9680);
+    // Serial.printf("Temperautre : %f, Humidity : %f\n",temperature,humidity);
+    Serial.printf("Distance = %6.2fcm\n",distance);
+}
 
-  Voltage = Vo_value * 5.0 / 1023.0;
-
-  dustDensity = (Voltage - 0.9)/0.005;
-  
-  average[cnt % 20] = dustDensity;
-  for(int j =0;j<20;j++){
-    sum += average[j];
-  } 
-  double mean = sum / 20;
-  Serial.printf(" Dust Density: %lf \n",dustDensity);
-  Serial.printf(" Average Dust Density : %lf\n",mean);
-  
-
-  delay(1000);
+void callback(char* topic, byte* payload, unsigned int length){
 
 }
