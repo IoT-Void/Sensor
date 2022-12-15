@@ -11,7 +11,6 @@ const int trigPin = 13;
 const int echoPin = 12;
 long duration;
 float distance;
-int cnt=0;
 const char*         mqttServer;
 const int           mqttPort = 1883;
 unsigned long       interval = 100;
@@ -23,8 +22,8 @@ DHTesp              dht;
 float               humidity = 0;
 float               temperature = 0;
 void callback(char* topic, byte* payload, unsigned int length);
-void pubStatus_dht22();
-void pub_distance();
+void pubStatus();
+
 void setup() {
     Serial.begin(115200);
     dht.setup(14, DHTesp::DHT22);
@@ -52,7 +51,7 @@ void setup() {
     while (!client.connected()) {
         Serial.println("Connecting to MQTT...");
  
-        if (client.connect("Outside")) {
+        if (client.connect("Inside")) {
             Serial.println("connected");  
         } else {
             Serial.print("failed with state "); Serial.println(client.state());
@@ -63,50 +62,40 @@ void setup() {
 
 void loop() {
     client.loop();
-    cnt++;
+
     unsigned long currentMillis = millis();
     if(currentMillis - lastPublished >= interval) {
         lastPublished = currentMillis;
-        pub_distance();
-        if(cnt % 50 == 0){
-            pubStatus_dht22();
-        }
+        pubStatus();
     }
 }
-void pub_distance(){
-    char dist_buf[10];    
+
+void pubStatus() {
+
     digitalWrite(trigPin,LOW);
     delayMicroseconds(2);
     digitalWrite(trigPin,HIGH);
     delayMicroseconds(10);
     digitalWrite(trigPin,LOW);
+
     duration = pulseIn(echoPin, HIGH);
     distance = duration * 0.017;
-    sprintf(dist_buf,"%.2f",distance);
 
-    if(distance < 100){
-        client.publish("id/Void/Heesane/Outside",dist_buf);
-        Serial.printf("A Detected\n");
-        delay(1000);
+    char dist_buf[10];
+
+    sprintf(dist_buf,"%f",distance);
+    if(distance <100){
+      printf("B Detected\n");
+      client.publish("id/Void/KoneJ/Inside",dist_buf);
+      delay(1000);
     }
-}
-void pubStatus_dht22() {
-    temperature = dht.getTemperature();
-    humidity = dht.getHumidity();
-
-    char tem_buf[10];
-    char hum_buf[10];
-
-    sprintf(tem_buf,"%.2f",temperature);
-    sprintf(hum_buf,"%.2f",humidity);
     
-    client.publish("id/Void/Heesane/Temperature", tem_buf);
-    client.publish("id/Void/Heesane/Humidity", hum_buf);
 
-    Serial.printf("Temperautre : %f, Humidity : %f\n",temperature,humidity);
+
+    // Serial.printf("Temperautre : %f, Humidity : %f\n",temperature,humidity);
+    Serial.printf("Distance = %6.2fcm\n",distance);
 }
 
 void callback(char* topic, byte* payload, unsigned int length){
 
 }
-
