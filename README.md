@@ -1,5 +1,5 @@
-<div style={{textAlign: 'center' ,  fontSize:'100px',fontWeight: bold , color:'blue'}}>Team : Void </div>
-<div style={{textAlign: 'center' ,  fontSize:'100px',fontWeight: bold , color:'blue'}}>스마트 강의실</div>
+<h1 align= 'center' ,  fontsize='100px',font-weight= 'bold' , color='blue'}}>Team : Void </h1>
+<h1 align= 'center' ,  fontsize='100px',font-weight= 'bold' , color='blue'}}>스마트 강의실</h1>
 
 ![image](https://user-images.githubusercontent.com/86594108/207942738-f1d48956-4626-4358-bf1f-f9e1443ccfc7.png)
 ![image](https://user-images.githubusercontent.com/86594108/207942757-15549e11-dc76-48ed-906a-ce053b386ea1.png)
